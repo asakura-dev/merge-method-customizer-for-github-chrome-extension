@@ -15,11 +15,17 @@ import { useEffect, useState } from "react";
 import debounce from "debounce";
 import { Spinner } from "@chakra-ui/spinner";
 import { REPOSITORY_HOSTS } from "./constant/constant";
+import { v4 as uuidv4 } from "uuid";
 
 const initialRepositoryRuleData: RepositoryRuleData = {
   repositoryUrl: "",
   mergeMethodRules: [
-    { baseBranch: "", compareBranchh: "", method: "CREATE_MERGE_COMMIT" },
+    {
+      id: uuidv4(),
+      baseBranch: "",
+      compareBranchh: "",
+      method: "CREATE_MERGE_COMMIT",
+    },
   ],
 };
 const saveRepositoryRulesToStorage = debounce(

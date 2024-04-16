@@ -1,19 +1,14 @@
+import { useState } from "react";
 import { Button } from "@chakra-ui/button";
 import { Image } from "@chakra-ui/image";
 import { Input } from "@chakra-ui/input";
-import {
-  VStack,
-  HStack,
-  Heading,
-  Spacer,
-  Grid,
-  GridItem,
-  Text,
-  Box,
-} from "@chakra-ui/layout";
-import DeleteImage from "../assets/Delete.png";
-import { useState } from "react";
+import { VStack, HStack, Heading, Spacer, Text, Box } from "@chakra-ui/layout";
+import { v4 as uuidv4 } from "uuid";
+import { DndContext } from "@dnd-kit/core";
+import { SortableContext, arrayMove } from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { MergeMethodRule, MergeMethodRuleData } from "./MergeMethodRule";
+import DeleteImage from "../assets/Delete.png";
 
 export type RepositoryRuleData = {
   repositoryUrl: string;
@@ -76,64 +71,101 @@ export const RepositoryRule = ({
           />
         </HStack>
         <Spacer h="8px" />
-        <Grid
-          templateRows="2, repeat(1, 1fr)"
-          templateColumns="1fr 12px 1fr 0px 1fr 24px"
-          gap={"4px"}
-        >
-          <GridItem rowSpan={1} colSpan={4}>
-            <HStack>
+        <VStack gap="4px">
+          <HStack gap="4px">
+            <HStack w="288px">
               <Heading as="h2" size="xs">
                 Branch
               </Heading>
               <Text fontSize="12px">Wildcards * may be used.</Text>
             </HStack>
-          </GridItem>
-          <GridItem rowSpan={1} colSpan={2}>
-            <Heading as="h2" size="xs">
-              Merge Method
-            </Heading>
-          </GridItem>
-          <GridItem rowSpan={1} colSpan={1}>
-            <Heading
-              as="h3"
-              fontSize="12px"
-              color="#717171"
-              fontWeight="normal"
-            >
-              Base
-            </Heading>
-          </GridItem>
-          <GridItem rowSpan={1} colSpan={1}></GridItem>
-          <GridItem rowSpan={1} colSpan={1}>
-            <Heading
-              as="h3"
-              fontSize="12px"
-              color="#717171"
-              fontWeight="normal"
-            >
-              Compare
-            </Heading>
-          </GridItem>
-          <GridItem rowSpan={1} colSpan={3}></GridItem>
-          {data.mergeMethodRules.map((rule, index) => (
-            <MergeMethodRule
-              key={index}
-              data={rule}
-              onChange={(mergeMethod) => {
-                const newMergeMethodRules = [...data.mergeMethodRules];
-                newMergeMethodRules[index] = mergeMethod;
-                onChange({ ...data, mergeMethodRules: newMergeMethodRules });
-              }}
-              onDelete={() => {
-                const newMergeMethodRules = [...data.mergeMethodRules];
-                newMergeMethodRules.splice(index, 1);
-                onChange({ ...data, mergeMethodRules: newMergeMethodRules });
-              }}
-            />
-          ))}
-        </Grid>
+            <Box w="160px">
+              <Heading as="h2" size="xs">
+                Merge Method
+              </Heading>
+            </Box>
+          </HStack>
+          <HStack gap="8px">
+            <HStack w="284px" gap="4px">
+              <Box w="16px"></Box>
+              <Heading
+                as="h3"
+                fontSize="12px"
+                color="#717171"
+                fontWeight="normal"
+                w="123px"
+              >
+                Base
+              </Heading>
+              <Box w="10px" flexShrink={0}></Box>
+              <Heading
+                as="h3"
+                fontSize="12px"
+                color="#717171"
+                fontWeight="normal"
+                w="123px"
+              >
+                Compare
+              </Heading>
+            </HStack>
+            <Box w="160px"></Box>
+          </HStack>
+          <DndContext
+            modifiers={[restrictToVerticalAxis]}
+            onDragEnd={(event) => {
+              const { active, over } = event;
+              if (over == null) {
+                return;
+              }
+              if (active.id !== over.id) {
+                const oldIndex = data.mergeMethodRules.findIndex(
+                  (item) => item.id === active.id
+                );
+                const newIndex = data.mergeMethodRules.findIndex(
+                  (item) => item.id === over.id
+                );
+                onChange({
+                  ...data,
+                  mergeMethodRules: arrayMove(
+                    data.mergeMethodRules,
+                    oldIndex,
+                    newIndex
+                  ),
+                });
+              }
+            }}
+          >
+            <SortableContext items={data.mergeMethodRules}>
+              {data.mergeMethodRules.map((rule, index) => (
+                <MergeMethodRule
+                  key={rule.id}
+                  data={rule}
+                  onChange={(mergeMethod) => {
+                    console.log({ mergeMethod });
+                    const newMergeMethodRules = [...data.mergeMethodRules];
+                    newMergeMethodRules[index] = mergeMethod;
+                    onChange({
+                      ...data,
+                      mergeMethodRules: newMergeMethodRules,
+                    });
+                  }}
+                  onDelete={() => {
+                    const newMergeMethodRules = [...data.mergeMethodRules];
+                    newMergeMethodRules.splice(index, 1);
+                    onChange({
+                      ...data,
+                      mergeMethodRules: newMergeMethodRules,
+                    });
+                  }}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        </VStack>
         <HStack>
+          <Text fontSize="12px">
+            Rules positioned higher in the list take precedence.
+          </Text>
           <Spacer />
           <Button
             size="xs"
@@ -141,11 +173,13 @@ export const RepositoryRule = ({
             borderRadius="4px"
             fontWeight="normal"
             onClick={() => {
+              const id = uuidv4();
               onChange({
                 ...data,
                 mergeMethodRules: [
                   ...data.mergeMethodRules,
                   {
+                    id,
                     baseBranch: "",
                     compareBranchh: "",
                     method: "CREATE_MERGE_COMMIT",
